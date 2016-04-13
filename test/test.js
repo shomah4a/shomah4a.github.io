@@ -153,7 +153,7 @@ function initialize() {
         elem.complete = true;
     });
 
-    elem.setAttribute('src', '/img');
+    elem.setAttribute('src', 'python-logo.png');
 
     var obj = initViewableCounter(elem, elem);
 
