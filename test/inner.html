@@ -3,72 +3,465 @@
 <title>innerframe</title>
 </head>
 <body>
-  <div style="border: solid">
-    <script type="text/javascript" src="https://j.zucks.net.zimg.jp/j?f=102775"></script>
+
+  <div id="zucksad" style="border:solid" />
   </div>
 
-<textarea id="script" style="width: 400px; height; 400px" rows="20">
-var img = document.getElementsByTagName('img')[0];
-function getRoot(w) {
-  if (!w) {
-    w = window;
+  <script type="text/javascript">
+(
+function(param) {
+
+  var initViewableCounter = function(e, img, onViewImp) {
+
+    var getOffset = function (w) {
+      if (w === w.parent) {
+        return [0, 0];
+      }
+
+      var parentOffset = getOffset(w.parent);
+      var frame = w.frameElement;
+
+      if (!frame) {
+        return [0, 0];
+      }
+
+      var rect = frame.getBoundingClientRect();
+      var x = rect.left;
+      var y = rect.top;
+
+      return [x + parentOffset[0], y + parentOffset[1]];
+    }
+
+    var getBounding = function() {
+      var rect = e.getBoundingClientRect();
+      var offset = getOffset(window);
+      var x = offset[0];
+      var y = offset[1];
+
+      return {
+        top: rect.top + y,
+        left: rect.left + x,
+        bottom: rect.bottom + y,
+        right: rect.right + x
+      };
+    }
+
+    var getViewablePercent = function() {
+      var area = e.width * e.height;
+
+      if (area <= 0) {
+        return 0;
+      }
+
+      var rect = getBounding();
+
+      var pageWidth = document.body.clientWidth;
+      var pageHeight = document.body.clientHeight;
+
+      if (rect.left < 0) {
+        rect.left = 0;
+      }
+
+      if (rect.top < 0) {
+        rect.top = 0;
+      }
+
+      if (rect.right > pageWidth) {
+        rect.right = pageWidth;
+      }
+
+      if (rect.bottom > pageHeight) {
+        rect.bottom = pageHeight;
+      }
+
+      var w = rect.right - rect.left;
+      var h = rect.bottom - rect.top;
+
+      if (w < 0) {
+        return 0;
+      }
+
+      if (h < 0) {
+        return 0;
+      }
+
+      return w * h / area;
+    }
+
+    var isRenderFinished = function() {
+      return loaded;
+    }
+
+    var isViewable = function() {
+      if (!isRenderFinished()) {
+        return false;
+      }
+
+      return getViewablePercent() >= 0.5;
+    }
+
+    var hasFocus = function() {
+      return root.document.hasFocus();
+    }
+
+    var inViewablePoll = function() {
+      var now = new Date()
+
+      if (!hasFocus()) {
+        if (viewableStart != null) {
+          totalViewableTime += now - viewableStart;
+        }
+
+        viewableStart = null;
+        inViewableTime = 0;
+        return;
+      }
+
+      if (!loaded) {
+        return;
+      }
+
+      if (isViewable()) {
+        if (viewableStart == null) {
+          viewableStart = now;
+        }
+      } else {
+
+        if (viewableStart != null) {
+          totalViewableTime += now - viewableStart;
+        }
+
+        viewableStart = null;
+        inViewableTime = 0;
+        return;
+      }
+
+      inViewableTime = now - viewableStart;
+
+      if (inViewableTime > 1000 && !sent) {
+
+        if (onViewImp) {
+          onViewImp(inViewableTime);
+        }
+        sent = true;
+      }
+    }
+
+    var removeTimer = function() {
+      window.clearInterval(timerId);
+    }
+
+    var getRoot = function getRoot(w) {
+      if (!w) {
+        w = window;
+      }
+      if (w === w.parent) {
+        return w;
+      }
+      return getRoot(w.parent);
+    }
+
+    // for iframe
+    var root = getRoot(window);
+
+    // for closure
+    var sent = false;
+    var loaded = false;
+    var viewableStart = null;
+    var inViewableTime = 0;
+    var totalViewableTime = 0;
+
+    var timerId = window.setInterval(function () {
+      try {
+        inViewablePoll();
+      } catch (error) {
+        reportError(error.message);
+        removeTimer();
+      }
+    }, 100);
+
+    img.addEventListener('load', function () {
+      loaded = true;
+    });
+
+    var obj = {};
+    obj.isViewable = isViewable;
+    obj.isRenderFinished = isRenderFinished;
+    obj.getViewablePercent = getViewablePercent;
+    obj.getInViewableTime = function () {
+      return inViewableTime;
+    }
+    obj.getTotalViewableTime = function () {
+      return totalViewableTime + inViewableTime;
+    }
+    obj.removeTimer = removeTimer;
+
+    return obj;
   }
-  if (w === w.parent) {
-    return w;
-  }
-  return getRoot(w.parent);
-}
 
-function getOffset(w) {
-  if (w == w.parent) {
-    return [0, 0];
-  }
-
-  var parentOffset = getOffset(w.parent);
-  var frame = w.frameElement;
-
-  if (!frame) {
-    return [0, 0];
-  }
-
-  var rect = frame.getBoundingClientRect();
-  var x = rect.left;
-  var y = rect.top;
-
-  return [x + parentOffset[0], y + parentOffset[1]];
-}
-
-function getBounding(img) {
-  var rect = img.getBoundingClientRect();
-  var offset = getOffset(window);
-  var x = offset[0];
-  var y = offset[1];
-
-  return {
-    top: rect.top + y,
-    left: rect.left + x,
-    bottom: rect.bottom + y,
-    right: rect.right + x
+  var isRequestWithCredentials = function(request) {
+    return "withCredentials" in request
+      && document.location.origin
+      && document.location.origin !== "null"
+      && document.location.origin !== "file://";
   };
-}
 
-var root = getRoot();
+  var reportError = function(message) {
+    var request = new XMLHttpRequest();
+    var url = 'https://k.zucks.net/e/?t=1&f=' + param.f + "&m=" + encodeURIComponent(message);
+    request.open('GET', url, true);
+    if (isRequestWithCredentials(request)) {
+      request.withCredentials = true;
+    }
+    request.send();
+  };
 
-console.log(getBounding(img));
-</textarea>
-<br/>
-<div style="text-align: right">
-  <input type="button" value="eval" id="eval" />
-</div>
+  var reportWithError = function(fn) {
+    try {
+      fn();
+    } catch(error) {
+      reportError(error.message);
+      throw error;
+    }
+  };
 
-<script type="text/javascript">
+  reportWithError(function() {
+    var doc = document;
+    var doNothing = function(){};
+    var startedAt = new Date().getTime();
+    var random = Math.floor(Math.random() * 1000000000);
+    var width = param.w || 320;
+    var height = param.h || 50;
+    var scr = screen || { height: 0, width: 0 };
 
-  var btn = document.getElementById('eval');
+    var url = function(hoge) {
+      return "https:" + hoge;
+    };
 
-  btn.addEventListener('click', function () {
-    eval(document.getElementById('script').value);
+    var zgokid = (function(param) {
+      if (param.eid && doc.getElementById(param.eid)) {
+        return param.eid;
+      } else {
+        var id = "zucksad" + random;
+        doc.write("<div style='margin:0;border:0;padding:0;text-align:center;width:100%;height:" + height + "px' id='" + id + "'></div>");
+        return id;
+      }
+    })(param);
+
+    var wrapperDiv = null;
+    var getWrapperDiv = function() {
+      if (wrapperDiv == null) {
+        wrapperDiv = doc.createElement('div');
+        wrapperDiv.setAttribute('style', 'position:relative;margin:0 auto;padding:0;border:0;width:' + width + 'px');
+        doc.getElementById(zgokid).appendChild(wrapperDiv);
+      }
+      return wrapperDiv;
+    }
+
+    // parse and validate ida
+    var zucksIdfa = (function() {
+      var zucksIdfa = window.zucksIdfa;
+      if (zucksIdfa == null || zucksIdfa.ida == null || zucksIdfa.ida === "") {
+        return null;
+      }
+
+      if (zucksIdfa.lat !== 0 && zucksIdfa.lat !== 1 && zucksIdfa.lat !== '0' && zucksIdfa.lat !== '1') {
+        reportError('invalid zucksIdfa format');
+        return null;
+      }
+
+      return zucksIdfa;
+    })();
+
+    var renderHTML = function(content, id, imark, vimpUrl) {
+      var iframe = doc.createElement('iframe');
+      iframe.setAttribute("style", "border:none;padding:0;margin:0;");
+      iframe.setAttribute("id", id);
+      iframe.setAttribute("width", width);
+      iframe.setAttribute("height", height);
+      iframe.setAttribute("allowtransparency", "false");
+      iframe.setAttribute("hspace", "0");
+      iframe.setAttribute("vspace", "0");
+      iframe.setAttribute("frameborder", "0");
+      iframe.setAttribute("scrolling", "no");
+
+      getWrapperDiv().appendChild(iframe);
+
+      var vc = initViewableCounter(iframe, iframe, function () {
+        if (vimpUrl) {
+          requestWithTimer(30000, url(vimpUrl), doNothing, doNothing, { credentials: true });
+        }
+      });
+
+      var _doc = doc.getElementById(id).contentWindow.document;
+      _doc.open().write('<html><head></head><body style="padding:0px;margin:0px;border:0;">' + content + '</body></html>');
+      _doc.close();
+
+      if (imark) {
+        renderImark(iframe);
+      }
+    };
+
+    var renderImg = function(src, href, imark, vimpUrl) {
+      var img = doc.createElement('img');
+      var vc = initViewableCounter(img, img, function() {
+        requestWithTimer(30000, url(vimpUrl), doNothing, doNothing, { credentials: true });
+      });
+      img.setAttribute('src', src);
+      img.setAttribute('width', width);
+      img.setAttribute('height', height);
+      img.setAttribute('style', 'border:0;padding:0;margin:0;display:inline-block;');
+
+      var a = doc.createElement('a');
+      a.setAttribute('href', href);
+
+      // iOS Safari Issue
+      // https://github.com/voyagegroup/zgok/issues/2026
+      var ua = window.navigator.userAgent.toLowerCase();
+      if (window != window.parent && (ua.indexOf("iphone") != -1 || ua.indexOf("ipad") != -1 || ua.indexOf("ipod") != -1)) {
+        a.setAttribute('target', '_top');
+      } else {
+        a.setAttribute('target', '_blank');
+      }
+
+      a.appendChild(img);
+
+      getWrapperDiv().appendChild(a);
+
+      if (imark) {
+        renderImark(a);
+      }
+
+      a.addEventListener('click', function(ev) {
+        var viewableTimeParam = '&tvt=' + vc.getTotalViewableTime() + '&vt=' + vc.getInViewableTime();
+        a.setAttribute('href', href + '&x=' + ev.offsetX + '&y=' + ev.offsetY + viewableTimeParam);
+        vc.removeTimer();
+      }, true);
+    };
+
+    var renderFiller = function() {
+      if(param.filler) {
+        renderHTML(param.filler, "zucksadif" + random, false);
+      };
+    };
+
+    var renderImark = function(adEl) {
+      var markEl = doc.createElement('div');
+      var anchorEl = doc.createElement('a');
+      anchorEl.setAttribute('href', 'https://zucks.co.jp/privacy/ads/?from_imark=1&fid=' + param.f);
+      anchorEl.setAttribute('style', 'width:100%;height:100%;border:0;margin:0;padding:0;display:none;');
+      anchorEl.setAttribute('target', '_blank');
+      anchorEl.textContent = ' ';
+
+      var expanded = false;
+      var handleClick = function() {
+        markEl.removeEventListener('click', handleClick);
+        if (expanded) {
+          markEl.style.width = '17px';
+        } else {
+          markEl.style.webkitTransitionProperty = 'width';
+          markEl.style.webkitTransitionDuration = '0.5s';
+          markEl.style.width = '85px';
+        }
+      }
+
+      var handleEndAnimation = function() {
+        anchorEl.style.display = expanded ? 'none' : 'block';
+        expanded = !expanded;
+        markEl.addEventListener('click', handleClick);
+      }
+
+      markEl.setAttribute('style', 'width:17px;height:15px;background:rgba(255, 255, 255, 0.8) url("https://static.zucks.net.zimg.jp/i/ads_by.png") no-repeat right top; background-size:85px 15px; position:absolute; right: 0; border-bottom-left-radius:4px;');
+      markEl.addEventListener('click', handleClick);
+      markEl.addEventListener('webkitTransitionEnd', handleEndAnimation);
+      markEl.appendChild(anchorEl);
+      getWrapperDiv().insertBefore(markEl, adEl);
+    }
+
+    var render = function(data) {
+      var imark = data.im === "1"; // "0":hidden(default), "1":visible
+      var impParam = '?k=' + data.k + '&v=' + data.v + '&p=' + data.p + '&sw=' + scr.width + '&sh=' + scr.height;
+      var vimp = '//k.zucks.net/vi/' + impParam;
+
+      if (data.ht) {
+        renderHTML(data.ht, "zucksadif" + random, imark, vimp);
+      } else if (data.iu) {
+        var latency = new Date().getTime() - startedAt;
+        renderImg(url(data.iu.replace(/^https?:/, '')), url('//k.zucks.net/rd/?k=' + data.k + '&v=' + data.v + '&p=' + data.p + '&l='+latency), imark, vimp);
+      } else if(param.filler) {
+        renderHTML(param.filler, "zucksadif" + random, imark, vimp);
+      };
+
+      var latency = new Date().getTime() - startedAt;
+      var imp = '//k.zucks.net/i/' + impParam + '&l='+latency;
+      requestWithTimer(30000, url(imp), doNothing, doNothing, { credentials: true });
+    };
+
+    var requestWithTimer = function(timeout, address, onLoad, onError, option) {
+      option = option || {};
+
+      var request = new XMLHttpRequest();
+      var onTimeout = function() {
+        reportWithError(function() {
+          request.abort();
+          onError();
+        });
+      };
+      var timer = setTimeout(onTimeout, timeout);
+      request.open('GET', address, true);
+      request.onload = function() {
+        reportWithError(function() {
+          clearTimeout(timer);
+          onLoad(JSON.parse(request.responseText));
+        });
+      };
+      request.onerror = function(){
+        reportWithError(function() {
+          clearTimeout(timer);
+          onError();
+        });
+      };
+
+      if (option.credentials && isRequestWithCredentials(request)) {
+        request.withCredentials = true;
+      }
+      request.send();
+    };
+
+    var defaultRender = function() {
+      var sh = '//sh.zucks.net/opt/json/api/v1?f=' + param.f + '&rnd=' + random + '&sw=' + scr.width + '&sh=' + scr.height;
+      if (zucksIdfa !== null) {
+        sh += '&ida=' + zucksIdfa.ida + '&lat=' + zucksIdfa.lat;
+      }
+      var onErrorOrTimeout = function() {
+        sendTimeoutBeacon();
+        renderFiller();
+      };
+      requestWithTimer(5000, url(sh), render, onErrorOrTimeout, { credentials: true });
+    };
+
+    var sendTimeoutBeacon = function() {
+      var latency = new Date().getTime() - startedAt;
+      var beacon= '//k.zucks.net/f/?f=' + param.f + '&l='+latency;
+      requestWithTimer(30000, url(beacon), doNothing, doNothing, { credentials: true });
+    };
+
+    var shuffle = function(array) {
+      for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+      return array;
+    };
+
+    defaultRender();
   });
+}
+)({f:102775, eid:'zucksad'});
 
-</script>
+  </script>
+
 </body>
 </html>
