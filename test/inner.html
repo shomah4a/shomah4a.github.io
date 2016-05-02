@@ -55,8 +55,8 @@ function(param) {
 
       var rect = getBounding();
 
-      var pageWidth = document.body.clientWidth;
-      var pageHeight = document.body.clientHeight;
+      var pageWidth = root.document.body.clientWidth;
+      var pageHeight = root.document.body.clientHeight;
 
       if (rect.left < 0) {
         rect.left = 0;
@@ -105,8 +105,6 @@ function(param) {
     }
 
     var inViewablePoll = function() {
-
-      console.log(hasFocus());
       var now = new Date()
 
       if (!hasFocus()) {
