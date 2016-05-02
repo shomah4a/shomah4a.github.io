@@ -3,6 +3,72 @@
 <title>innerframe</title>
 </head>
 <body>
-<script type="text/javascript" src="https://j.zucks.net.zimg.jp/j?f=102775"></script>
+  <div style="border: solid">
+    <script type="text/javascript" src="https://j.zucks.net.zimg.jp/j?f=102775"></script>
+  </div>
+
+<textarea id="script" style="width: 400px; height; 400px" rows="20">
+var img = document.getElementsByTagName('img')[0];
+function getRoot(w) {
+  if (!w) {
+    w = window;
+  }
+  if (w === w.parent) {
+    return w;
+  }
+  return getRoot(w.parent);
+}
+
+function getOffset(w) {
+  if (w == w.parent) {
+    return [0, 0];
+  }
+
+  var parentOffset = getOffset(w.parent);
+  var frame = w.frameElement;
+
+  if (!frame) {
+    return [0, 0];
+  }
+
+  var rect = frame.getBoundingClientRect();
+  var x = rect.left;
+  var y = rect.top;
+
+  return [x + parentOffset[0], y + parentOffset[1]];
+}
+
+function getBounding(img) {
+  var rect = img.getBoundingClientRect();
+  var offset = getOffset(window);
+  var x = offset[0];
+  var y = offset[1];
+
+  return {
+    top: rect.top + y,
+    left: rect.left + x,
+    bottom: rect.bottom + y,
+    right: rect.right + x
+  };
+}
+
+var root = getRoot();
+
+console.log(getBounding(img));
+</textarea>
+<br/>
+<div style="text-align: right">
+  <input type="button" value="eval" id="eval" />
+</div>
+
+<script type="text/javascript">
+
+  var btn = document.getElementById('eval');
+
+  btn.addEventListener('click', function () {
+    eval(document.getElementById('script').value);
+  });
+
+</script>
 </body>
 </html>
