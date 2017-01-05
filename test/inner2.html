@@ -166,7 +166,7 @@ function(param) {
 
   var getBrowserLocation = function (window) {
     try {
-      return window.location.href;
+      return window.top.location.href;
     } catch (e) {
     }
 
