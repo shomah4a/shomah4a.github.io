@@ -380,7 +380,7 @@ function(param) {
       };
       renderBeacons(data.bc || []);
       var latency = new Date().getTime() - startedAt;
-      var location = getBrowserLocation(window);
+      var location = encodeURIComponent(getBrowserLocation(window));
       var imp = '//k.zucks.net/i/' + impParam + '&l='+latency + '&loc=' + location;
       requestWithTimer(30000, url(imp), doNothing, doNothing, { credentials: true });
     };
