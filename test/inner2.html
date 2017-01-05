@@ -8,7 +8,8 @@
   <div id="zucksad"></div>
 
 <script type="text/javascript">
-(function(param) {
+(
+function(param) {
 
   var initViewableCounter = function(e, img, onViewImp) {
 
@@ -161,6 +162,15 @@
     obj.removeTimer = removeTimer;
 
     return obj;
+  }
+
+  var getBrowserLocation = function (window) {
+    try {
+      return window.location.href;
+    } catch (e) {
+    }
+
+    return document.referrer;
   }
 
   var isRequestWithCredentials = function(request) {
@@ -370,7 +380,8 @@
       };
       renderBeacons(data.bc || []);
       var latency = new Date().getTime() - startedAt;
-      var imp = '//k.zucks.net/i/' + impParam + '&l='+latency;
+      var location = getBrowserLocation(window);
+      var imp = '//k.zucks.net/i/' + impParam + '&l='+latency + '&loc=' + location;
       requestWithTimer(30000, url(imp), doNothing, doNothing, { credentials: true });
     };
 
@@ -435,7 +446,8 @@
 
     defaultRender();
   });
-})({'eid': 'zucksad', 'f': 102775});
+}
+)({'eid': 'zucksad', 'f': 102775});
 </script>
 
 </body>
