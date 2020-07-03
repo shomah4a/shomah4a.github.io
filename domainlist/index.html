@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>domain list converter</title>
+</head>
+<body>
+
+<div>
+    <p>Source List</p>
+    <textarea id="src" cols="100" rows="50"></textarea>
+    <div>
+        <button onClick="convert()">Convert</button>
+    </div>
+</div>
+
+<div>
+    <p>Convreted List</p>
+    <textarea id="dest" cols="100" rows="50"></textarea>
+</div>
+
+<script type="text/javascript">
+
+    function extractDomain(text) {
+        try {
+            const url = new URL(text);
+            return url.host;
+        } catch {
+            return text;
+        }
+    }
+
+    function convertLine(text) {
+        const domain = extractDomain(text);
+
+        return domain
+            .replace(/^\*\./, "")
+            .replace(/^\./, "");
+    }
+
+    function unique(arr) {
+        const n = {};
+
+        arr.forEach(line => {
+            n[line] = 1;
+        })
+
+        return Object.keys(n);
+    }
+
+    function convert() {
+        const src = document.getElementById("src");
+        const dest = document.getElementById("dest");
+        const converted = src.value.split("\n").map(line => convertLine(line));
+        dest.value = unique(converted).join("\n");
+    }
+
+</script>
+
+</body>
+</html>
